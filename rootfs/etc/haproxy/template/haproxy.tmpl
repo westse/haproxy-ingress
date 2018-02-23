@@ -119,22 +119,17 @@ frontend httpfront
     acl from-https ssl_fc
     acl ssl-offload ssl_fc
 
-{{- range $server := $ing.HAServers }}
+{{- range $server := $ing.HAProxies }}
+{{- $host := $server.HostnameLabel }}
+##
+## {{ if $server.IsDefaultServer }}Default backend{{ else }}{{ $server.Hostname }}{{ end }}
+
 {{- if isWildcardHostname $server.Hostname }}
     acl host-{{ $server.HostnameLabel }} hdr_reg(host) {{ hostnameRegex $server.Hostname }}
 {{- else }}
     acl host-{{ $server.HostnameLabel }} hdr(host) {{ $server.Hostname }} {{ $server.Hostname }}:80
 {{- end }}{{/* if isWildcardHostname $server.Hostname */}}
-{{- if ne $server.Alias "" }}
-{{- if isRegexHostname $server.Alias }}
-    acl alias-{{ $server.HostnameLabel }} hdr_reg(host) '{{ aliasRegex $server.Alias }}'
-{{- else }}
-    acl alias-{{ $server.HostnameLabel }} hdr(host) {{ $server.Alias }} {{ $server.Alias }}:80
-{{- end }}{{/* if isRegexHostname $server.Alias */}}
-{{- end }}{{/* if ne $server.Alias "" */}}
-{{- end }}{{/* range $server := $ing.HAServers */}}
 
-{{- range $server := $ing.HAServers }}
 {{- if $server.UseHTTPS }}
 {{- if $server.SSLRedirect }}
     redirect scheme https if host-{{ $server.HostnameLabel }}
@@ -146,40 +141,15 @@ frontend httpfront
 {{- end }}{{/* range $location := $server.Locations */}}
 {{- end }}{{/* if $server.SSLRedirect */}}
 {{- end }}{{/* if $server.UseHTTPS */}}
-{{- end }}{{/* range $server := $ing.HAServers */}}
 
-{{- range $server := $ing.HAServers }}
-{{- if ne $server.Alias "" }}
-{{- if $server.UseHTTPS }}
-{{- if $server.SSLRedirect }}
-    redirect scheme https if alias-{{ $server.HostnameLabel }}
-{{- else }}
-{{- range $location := $server.Locations }}
-{{- if $location.Rewrite.SSLRedirect }}
-    redirect scheme https if alias-{{ $server.HostnameLabel }}{{ $location.HAMatchPath }}
-{{- end }}{{/* if $location.Rewrite.SSLRedirect */}}
-{{- end }}{{/* range $location := $server.Locations */}}
-{{- end }}{{/* if $server.SSLRedirect */}}
-{{- end }}{{/* if $server.UseHTTPS */}}
-{{- end }}{{/* if ne $server.Alias "" */}}
-{{- end }}{{/* range $server := $ing.HAServers */}}
-
-{{- range $server := $ing.HAServers }}
 {{- if $server.UseHTTP }}
     #TODO: replace with using final backend rather than middle-man socket backend
     use_backend httpback-{{ $server.HostnameLabel }} if host-{{ $server.HostnameLabel }}
-
 {{- end }}{{/* if $server.UseHTTP */}}
+
+
 {{- end }}{{/* range $server := $ing.HAServers */}}
 
-{{- range $server := $ing.HAServers }}
-{{- if $server.UseHTTP }}
-{{- if ne $server.Alias "" }}
-    #TODO: replace with using final backend rather than middle-man socket backend
-    use_backend httpback-{{ $server.HostnameLabel }} if alias-{{ $server.HostnameLabel }}
-{{- end }}{{/* if ne $server.Alias "" */}}
-{{- end }}{{/* if $server.UseHTTP */}}
-{{- end }}{{/* range $server := $ing.HAServers */}}
     default_backend httpback-default-backend
 
 ######
@@ -243,20 +213,6 @@ frontend httpfront-{{ $host }}
 {{- end }}{{/* if $location.Rewrite.SSLRedirect */}}
 {{- end }}{{/* range $location := $server.Locations */}}
 {{- end }}{{/* if $server.SSLRedirect */}}
-
-{{- if ne $server.Alias "" }}
-{{- if $server.SSLRedirect }}
-    redirect scheme https if !from-https
-{{- else }}
-{{- range $location := $server.Locations }}
-{{- if $location.Rewrite.SSLRedirect }}
-    redirect scheme https if{{ $location.HAMatchPath }} !from-https
-{{- end }}{{/* if */}}
-{{- end }}{{/* range $location := $server.Locations */}}
-{{- end }}{{/* if $server.SSLRedirect */}}
-{{- end }}{{/* if $server.Alias */}}
-
-{{- end }}{{/* if IsDefaultServer */}}
 
 {{- if and $server.UseHTTPS (ne $authSSLCert.CAFileName "") }}
 {{- if eq $server.CertificateAuth.ErrorPage "" }}
