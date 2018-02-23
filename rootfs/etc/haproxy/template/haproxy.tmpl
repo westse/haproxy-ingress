@@ -121,22 +121,24 @@ frontend httpfront
 
 {{- range $server := $ing.HAProxies }}
 {{- $host := $server.HostnameLabel }}
+{{- $hostAcl := printf "host-%v" $server.HostnameLabel }}
+
 ##
 ## {{ if $server.IsDefaultServer }}Default backend{{ else }}{{ $server.Hostname }}{{ end }}
 
 {{- if isWildcardHostname $server.Hostname }}
-    acl host-{{ $server.HostnameLabel }} hdr_reg(host) {{ hostnameRegex $server.Hostname }}
+    acl {{ $hostAcl }} hdr_reg(host) {{ hostnameRegex $server.Hostname }}
 {{- else }}
-    acl host-{{ $server.HostnameLabel }} hdr(host) {{ $server.Hostname }} {{ $server.Hostname }}:80
+    acl {{ $hostAcl }} hdr(host) {{ $server.Hostname }} {{ $server.Hostname }}:80
 {{- end }}{{/* if isWildcardHostname $server.Hostname */}}
 
 {{- if $server.UseHTTPS }}
 {{- if $server.SSLRedirect }}
-    redirect scheme https if host-{{ $server.HostnameLabel }}
+    redirect scheme https if {{ $hostAcl }}
 {{- else }}
 {{- range $location := $server.Locations }}
 {{- if $location.Rewrite.SSLRedirect }}
-    redirect scheme https if host-{{ $server.HostnameLabel }}{{ $location.HAMatchPath }}
+    redirect scheme https if {{ $hostAcl }}{{ $location.HAMatchPath }}
 {{- end }}{{/* $location.Rewrite.SSLRedirect */}}
 {{- end }}{{/* range $location := $server.Locations */}}
 {{- end }}{{/* if $server.SSLRedirect */}}
@@ -144,7 +146,7 @@ frontend httpfront
 
 {{- if $server.UseHTTP }}
     #TODO: replace with using final backend rather than middle-man socket backend
-    use_backend httpback-{{ $server.HostnameLabel }} if host-{{ $server.HostnameLabel }}
+    use_backend httpback-{{ $server.HostnameLabel }} if {{ $hostAcl }}
 {{- end }}{{/* if $server.UseHTTP */}}
 
 
