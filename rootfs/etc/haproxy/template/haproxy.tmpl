@@ -124,15 +124,15 @@ frontend httpfront
     acl host-{{ $server.HostnameLabel }} hdr_reg(host) {{ hostnameRegex $server.Hostname }}
 {{- else }}
     acl host-{{ $server.HostnameLabel }} hdr(host) {{ $server.Hostname }} {{ $server.Hostname }}:80
-{{- end }}
+{{- end }}{{/* if isWildcardHostname $server.Hostname */}}
 {{- if ne $server.Alias "" }}
 {{- if isRegexHostname $server.Alias }}
     acl alias-{{ $server.HostnameLabel }} hdr_reg(host) '{{ aliasRegex $server.Alias }}'
 {{- else }}
     acl alias-{{ $server.HostnameLabel }} hdr(host) {{ $server.Alias }} {{ $server.Alias }}:80
-{{- end }}
-{{- end }}
-{{- end }}
+{{- end }}{{/* if isRegexHostname $server.Alias */}}
+{{- end }}{{/* if ne $server.Alias "" */}}
+{{- end }}{{/* range $server := $ing.HAServers */}}
 
 {{- range $server := $ing.HAServers }}
 {{- if $server.UseHTTPS }}
@@ -142,11 +142,11 @@ frontend httpfront
 {{- range $location := $server.Locations }}
 {{- if $location.Rewrite.SSLRedirect }}
     redirect scheme https if host-{{ $server.HostnameLabel }}{{ $location.HAMatchPath }}
-{{- end }}
-{{- end }}
-{{- end }}
-{{- end }}
-{{- end }}
+{{- end }}{{/* $location.Rewrite.SSLRedirect */}}
+{{- end }}{{/* range $location := $server.Locations */}}
+{{- end }}{{/* if $server.SSLRedirect */}}
+{{- end }}{{/* if $server.UseHTTPS */}}
+{{- end }}{{/* range $server := $ing.HAServers */}}
 
 {{- range $server := $ing.HAServers }}
 {{- if ne $server.Alias "" }}
@@ -157,28 +157,29 @@ frontend httpfront
 {{- range $location := $server.Locations }}
 {{- if $location.Rewrite.SSLRedirect }}
     redirect scheme https if alias-{{ $server.HostnameLabel }}{{ $location.HAMatchPath }}
-{{- end }}
-{{- end }}
-{{- end }}
-{{- end }}
-{{- end }}
-{{- end }}
+{{- end }}{{/* if $location.Rewrite.SSLRedirect */}}
+{{- end }}{{/* range $location := $server.Locations */}}
+{{- end }}{{/* if $server.SSLRedirect */}}
+{{- end }}{{/* if $server.UseHTTPS */}}
+{{- end }}{{/* if ne $server.Alias "" */}}
+{{- end }}{{/* range $server := $ing.HAServers */}}
 
 {{- range $server := $ing.HAServers }}
 {{- if $server.UseHTTP }}
     #TODO: replace with using final backend rather than middle-man socket backend
     use_backend httpback-{{ $server.HostnameLabel }} if host-{{ $server.HostnameLabel }}
-{{- end }}
-{{- end }}
+
+{{- end }}{{/* if $server.UseHTTP */}}
+{{- end }}{{/* range $server := $ing.HAServers */}}
 
 {{- range $server := $ing.HAServers }}
 {{- if $server.UseHTTP }}
 {{- if ne $server.Alias "" }}
     #TODO: replace with using final backend rather than middle-man socket backend
     use_backend httpback-{{ $server.HostnameLabel }} if alias-{{ $server.HostnameLabel }}
-{{- end }}
-{{- end }}
-{{- end }}
+{{- end }}{{/* if ne $server.Alias "" */}}
+{{- end }}{{/* if $server.UseHTTP */}}
+{{- end }}{{/* range $server := $ing.HAServers */}}
     default_backend httpback-default-backend
 
 ######
