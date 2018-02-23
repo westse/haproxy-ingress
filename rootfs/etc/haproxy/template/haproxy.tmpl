@@ -230,6 +230,8 @@ frontend httpfront
 {{- end }}{{/* if IsDefaultServer */}}
 {{- end }}{{/* range $location := $server.Locations */}}
 
+{{- end }}{{/* $server := $ing.HAProxies */}}
+
 ######
 ###### Error pages
 ######
