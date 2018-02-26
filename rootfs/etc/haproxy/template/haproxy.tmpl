@@ -132,13 +132,11 @@ frontend httpfront
     option forwardfor if-none
 {{- end }}{{/* if eq $cfg.Forwardfor "add" */}}
 
-{{- range $server := $ing.HAProxies }}
+{{- range $server := $ing.HAServers }}
 {{- $host := $server.HostnameLabel }}
 {{- $hostAcl := printf "host-%v" $server.HostnameLabel }}
 
-##
-## {{ if $server.IsDefaultServer }}Default backend{{ else }}{{ $server.Hostname }}{{ end }}
-
+# {{ $server.Hostname }}
 {{- if isWildcardHostname $server.Hostname }}
     acl {{ $hostAcl }} hdr_reg(host) {{ hostnameRegex $server.Hostname }}
 {{- else }}
@@ -156,18 +154,6 @@ frontend httpfront
 {{- end }}{{/* range $location := $server.Locations */}}
 {{- end }}{{/* if $server.SSLRedirect */}}
 {{- end }}{{/* if $server.UseHTTPS */}}
-
-{{- if $server.IsDefaultServer }}
-{{- if $server.SSLRedirect }}
-    redirect scheme https if !from-https
-{{- else }}
-{{- range $location := $server.Locations }}
-{{- if $location.Rewrite.SSLRedirect }}
-    redirect scheme https if{{ $location.HAMatchPath }} !from-https
-{{- end }}{{/* if $location.Rewrite.SSLRedirect */}}
-{{- end }}{{/* range $location := $server.Locations */}}
-{{- end }}{{/* if $server.SSLRedirect */}}
-{{- end }}{{/* if IsDefaultServer */}}
 
 {{- range $location := $server.Locations }}
 {{- if ne $location.HAWhitelist "" }}
@@ -219,18 +205,15 @@ frontend httpfront
 {{- end }}{{/* if $server.UseHttp */}}
 
 {{- range $location := $server.Locations }}
-{{- if $server.IsDefaultServer }}
-    default_backend {{ $location.Backend }}
-{{- else }}
 {{- if not $location.IsRootLocation }}
     use_backend {{ $location.Backend }} if {{ $hostAcl}} { var(txn.path) -m beg {{ $location.Path }} }
 {{- else }}
     use_backend {{ $location.Backend }} if {{ $hostAcl}}
 {{- end }}{{/* not $location.IsRootLocation */}}
-{{- end }}{{/* if IsDefaultServer */}}
 {{- end }}{{/* range $location := $server.Locations */}}
 
-{{- end }}{{/* $server := $ing.HAProxies */}}
+{{- end }}{{/* $server := $ing.HAServers */}}
+    default_backend upstream-default-backend
 
 ######
 ###### Error pages
