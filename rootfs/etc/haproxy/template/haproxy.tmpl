@@ -140,7 +140,7 @@ frontend httpfront
 {{- if isWildcardHostname $server.Hostname }}
     acl {{ $hostAcl }} hdr_reg(host) {{ hostnameRegex $server.Hostname }}
 {{- else }}
-    acl {{ $hostAcl }} hdr(host) {{ $server.Hostname }} {{ $server.Hostname }}:80
+    acl {{ $hostAcl }} hdr(host) {{ $server.Hostname }} {{ $server.Hostname }}:80 {{ $server.Hostname }}:443
 {{- end }}{{/* if isWildcardHostname $server.Hostname */}}
 
 {{- if $server.UseHTTPS }}
